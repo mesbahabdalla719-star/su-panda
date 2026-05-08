@@ -1,0 +1,64 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- COLLECTION GROUP RULES ---
+    // These MUST be isolated for collection group queries like collectionGroup(db, 'orders') to work correctly.
+    match /{path=**}/orders/{orderId} {
+      // Grant list access to the Super Admin for the dashboard
+      allow list: if request.auth != null && request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73';
+      // Grant read access to the owner and the Super Admin
+      allow get: if request.auth != null && (request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73' || request.auth.uid == resource.data.userId);
+    }
+
+    // --- COLLECTION RULES ---
+
+    // CUSTOMERS collection and subcollections
+    match /customers/{userId} {
+      // Super Admin and the owner can access the profile
+      allow get, update: if request.auth != null && (request.auth.uid == userId || request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73');
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow list: if request.auth != null && request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73';
+      
+      // User-specific data (Cart, Favorites, Nutrition)
+      match /cart/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /favorites/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /nutrition/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Orders subcollection (Direct access)
+      match /orders/{orderId} {
+        allow create: if request.auth != null && request.auth.uid == userId;
+        allow get: if request.auth != null && (request.auth.uid == userId || request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73');
+        allow update: if request.auth != null && request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73';
+        allow list: if request.auth != null && (request.auth.uid == userId || request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73');
+      }
+    }
+    
+    // DISHES collection
+    match /dishes/{dishId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73';
+    }
+    
+    // TESTIMONIALS collection
+    match /testimonials/{testimonialId} {
+        allow read: if true;
+        allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+        allow delete: if request.auth != null && request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73';
+    }
+
+    // CONTACT-SUBMISSIONS collection
+    match /contact-submissions/{submissionId} {
+      allow create: if true;
+      allow list, get, delete: if request.auth != null && request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73';
+    }
+  }
+}

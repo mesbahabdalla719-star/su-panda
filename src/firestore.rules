@@ -1,0 +1,67 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- HELPER FUNCTIONS ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isSuperAdmin() {
+      // THE UID nWh4SGrdQYZs8wlTg1PqpXoQnB73 IS YOUR MASTER ADMIN
+      return isSignedIn() && request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73';
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // --- COLLECTION GROUP RULES ---
+    // These MUST be defined at the root for collectionGroup queries to work
+    match /{path=**}/orders/{orderId} {
+      allow list, get: if isSuperAdmin();
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && (request.resource.data.userId == request.auth.uid);
+    }
+
+    // --- COLLECTION RULES ---
+
+    // CUSTOMERS collection and subcollections
+    match /customers/{userId} {
+      // Owner and Super Admin can manage profiles
+      allow get, list, update: if isSuperAdmin() || isOwner(userId);
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      
+      // User-specific operational data
+      match /cart/{docId} { allow read, write: if isOwner(userId); }
+      match /favorites/{docId} { allow read, write: if isOwner(userId); }
+      match /nutrition/{docId} { allow read, write: if isOwner(userId); }
+
+      // Sub-collection orders (direct path access)
+      match /orders/{orderId} {
+        allow create: if isOwner(userId);
+        allow get, list, update, delete: if isOwner(userId) || isSuperAdmin();
+      }
+    }
+    
+    // DISHES collection
+    match /dishes/{dishId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+    
+    // TESTIMONIALS collection
+    match /testimonials/{testimonialId} {
+        allow read: if true;
+        allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+        allow delete: if isSuperAdmin();
+    }
+
+    // CONTACT-SUBMISSIONS collection
+    match /contact-submissions/{submissionId} {
+      allow create: if true;
+      allow list, get, delete: if isSuperAdmin();
+    }
+  }
+}

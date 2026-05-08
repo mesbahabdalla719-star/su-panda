@@ -1,0 +1,274 @@
+{
+  "entities": {
+    "LocalizedString": {
+      "title": "Localized String",
+      "type": "object",
+      "description": "A string that has values for multiple languages.",
+      "properties": {
+        "en": { "type": "string" },
+        "ar": { "type": "string" },
+        "ru": { "type": "string" }
+      },
+      "required": ["en", "ar", "ru"]
+    },
+    "Dish": {
+      "title": "Dish",
+      "type": "object",
+      "description": "Represents a single meal or dish available for order.",
+      "properties": {
+        "name": { "$ref": "#/backend/entities/LocalizedString" },
+        "description": { "$ref": "#/backend/entities/LocalizedString" },
+        "category": {
+          "type": "string",
+          "enum": ["breakfast", "lunch", "dinner", "salads-appetizers", "main-courses", "snacks", "desserts", "hot-drinks", "cold-drinks", "kids-meals"]
+        },
+        "imageId": { "type": "string" },
+        "price": { "type": "number" },
+        "calories": { "type": "number" },
+        "protein": { "type": "number" },
+        "carbohydrates": { "type": "number" },
+        "sugar": { "type": "number" },
+        "fats": { "type": "number" },
+        "glycemicIndex": { "type": "number" },
+        "isSuitableForDiabetics": { "type": "boolean" },
+        "isSuitableForKids": { "type": "boolean" },
+        "portionSize": { "type": "string" },
+        "dailyTip": { "$ref": "#/backend/entities/LocalizedString" }
+      },
+      "required": ["name", "description", "category", "price", "calories", "protein", "carbohydrates", "sugar", "fats"]
+    },
+    "Customer": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Customer",
+      "type": "object",
+      "description": "Represents a user of the Diabetic Delights app, who can be a customer, staff, or admin.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user, matching their Firebase Auth UID."
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "User's phone number used for login and communication."
+        },
+        "passwordHash": {
+          "type": "string",
+          "description": "Hashed password for secure authentication. **NOTE:** Store password hashes, NOT plain text passwords."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "User's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "User's last name."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address for communication and account recovery.",
+          "format": "email"
+        },
+        "preferredLanguage": {
+          "type": "string",
+          "description": "The user's preferred language for the app interface (e.g., 'ar', 'en', 'ru')."
+        },
+        "role": {
+            "type": "string",
+            "description": "The role of the user, which determines their permissions.",
+            "enum": ["customer", "staff", "admin"]
+        },
+        "jobTitle": {
+          "type": "string",
+          "description": "The job title of the staff or admin user."
+        }
+      },
+      "required": [
+        "id",
+        "phoneNumber",
+        "role"
+      ]
+    },
+    "Order": {
+      "title": "Order",
+      "type": "object",
+      "description": "Represents a customer's order.",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who placed the order."
+        },
+        "customerDetails": {
+          "type": "object",
+          "properties": {
+            "fullName": { "type": "string" },
+            "address": { "type": "string" },
+            "phone": { "type": "string" }
+          },
+          "required": ["fullName", "address", "phone"]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "$ref": "#/backend/entities/LocalizedString" },
+              "quantity": { "type": "number" },
+              "price": { "type": "number" }
+            },
+            "required": ["id", "name", "quantity", "price"]
+          }
+        },
+        "totalPrice": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "preparing", "done", "cancelled"],
+          "description": "The current status of the order."
+        },
+        "createdAt": {
+          "type": "object",
+          "description": "Timestamp when the order was created. Stored as a Firestore Timestamp object."
+        }
+      },
+      "required": ["userId", "customerDetails", "items", "totalPrice", "status", "createdAt"]
+    },
+    "Testimonial": {
+      "title": "Testimonial",
+      "type": "object",
+      "description": "Represents a customer's testimonial or review.",
+      "properties": {
+        "author": {
+          "type": "string",
+          "description": "Name of the person leaving the testimonial."
+        },
+        "text": {
+          "$ref": "#/backend/entities/LocalizedString"
+        },
+        "rating": {
+          "type": "number",
+          "description": "A star rating from 1 to 5."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who submitted the testimonial."
+        },
+        "createdAt": {
+          "type": "object",
+          "description": "Timestamp of when the testimonial was submitted."
+        }
+      },
+      "required": ["author", "text", "userId", "createdAt", "rating"]
+    },
+    "ContactSubmission": {
+      "title": "Contact Submission",
+      "type": "object",
+      "description": "A message sent through the contact form.",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "object" }
+      },
+      "required": ["name", "email", "message", "createdAt"]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "phone",
+      "google.com"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/customers/{customerId}",
+        "definition": {
+          "entityName": "Customer",
+          "schema": {
+            "$ref": "#/backend/entities/Customer"
+          },
+          "description": "Stores user profile information, including their role (customer, staff, admin).",
+          "subcollections": [
+            {
+              "path": "/orders/{orderId}",
+              "definition": {
+                "entityName": "Order",
+                "schema": { "$ref": "#/backend/entities/Order" },
+                "description": "Stores the orders for a specific customer."
+              }
+            },
+            {
+              "path": "/cart/current",
+              "definition": {
+                "description": "Stores the user's current shopping cart."
+              }
+            },
+            {
+              "path": "/favorites/current",
+              "definition": {
+                "description": "Stores the user's favorite dishes."
+              }
+            },
+            {
+              "path": "/nutrition/history",
+              "definition": {
+                "description": "Stores the user's nutrition history."
+              }
+            }
+          ],
+          "params": [
+            {
+              "name": "customerId",
+              "description": "The unique identifier for the user, corresponding to their Firebase Auth UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/testimonials/{testimonialId}",
+        "definition": {
+          "entityName": "Testimonial",
+          "schema": { "$ref": "#/backend/entities/Testimonial" },
+          "description": "Stores all customer testimonials.",
+          "params": [
+            {
+              "name": "testimonialId",
+              "description": "The unique identifier for the testimonial."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/dishes/{dishId}",
+        "definition": {
+          "entityName": "Dish",
+          "schema": { "$ref": "#/backend/entities/Dish" },
+          "description": "Stores all available dishes.",
+          "params": [
+            {
+              "name": "dishId",
+              "description": "The unique identifier for the dish."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/contact-submissions/{submissionId}",
+        "definition": {
+          "entityName": "ContactSubmission",
+          "schema": { "$ref": "#/backend/entities/ContactSubmission" },
+          "description": "Stores messages submitted via the contact form.",
+          "params": [
+            {
+              "name": "submissionId",
+              "description": "Unique identifier for the contact message."
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
