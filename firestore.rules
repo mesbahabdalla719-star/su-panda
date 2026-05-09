@@ -1,64 +1,65 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // --- HELPER FUNCTIONS ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isSuperAdmin() {
+      // MASTER ADMIN UID: nWh4SGrdQYZs8wlTg1PqpXoQnB73
+      return isSignedIn() && request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73';
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
     // --- COLLECTION GROUP RULES ---
-    // These MUST be isolated for collection group queries like collectionGroup(db, 'orders') to work correctly.
+    // These are critical for collectionGroup('orders') queries used in Admin Dashboard
     match /{path=**}/orders/{orderId} {
-      // Grant list access to the Super Admin for the dashboard
-      allow list: if request.auth != null && request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73';
-      // Grant read access to the owner and the Super Admin
-      allow get: if request.auth != null && (request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73' || request.auth.uid == resource.data.userId);
+      allow list, get: if isSuperAdmin();
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && (request.resource.data.userId == request.auth.uid);
+      allow update: if isSuperAdmin();
     }
 
     // --- COLLECTION RULES ---
 
-    // CUSTOMERS collection and subcollections
+    // CUSTOMERS collection
     match /customers/{userId} {
-      // Super Admin and the owner can access the profile
-      allow get, update: if request.auth != null && (request.auth.uid == userId || request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73');
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow list: if request.auth != null && request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73';
+      allow get, list, update: if isSuperAdmin() || isOwner(userId);
+      allow create: if isSignedIn() && request.auth.uid == userId;
       
-      // User-specific data (Cart, Favorites, Nutrition)
-      match /cart/{docId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-      match /favorites/{docId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-      match /nutrition/{docId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
+      match /cart/{docId} { allow read, write: if isOwner(userId); }
+      match /favorites/{docId} { allow read, write: if isOwner(userId); }
+      match /nutrition/{docId} { allow read, write: if isOwner(userId); }
 
-      // Orders subcollection (Direct access)
       match /orders/{orderId} {
-        allow create: if request.auth != null && request.auth.uid == userId;
-        allow get: if request.auth != null && (request.auth.uid == userId || request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73');
-        allow update: if request.auth != null && request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73';
-        allow list: if request.auth != null && (request.auth.uid == userId || request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73');
+        allow create: if isOwner(userId);
+        allow get, list, update, delete: if isOwner(userId) || isSuperAdmin();
       }
     }
     
     // DISHES collection
     match /dishes/{dishId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73';
+      allow write: if isSuperAdmin();
     }
     
     // TESTIMONIALS collection
     match /testimonials/{testimonialId} {
         allow read: if true;
-        allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-        allow delete: if request.auth != null && request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73';
+        allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+        allow delete: if isSuperAdmin();
     }
 
     // CONTACT-SUBMISSIONS collection
     match /contact-submissions/{submissionId} {
       allow create: if true;
-      allow list, get, delete: if request.auth != null && request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73';
+      allow list, get, delete: if isSuperAdmin();
     }
   }
 }
