@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { DishCard } from '@/components/dish-card';
 import type { Category, Dish, Testimonial } from '@/lib/types';
 import { useLanguage } from '@/context/language-context';
-import { AlertTriangle, Target, FileText, Sparkles as QualitySparkles, ShieldCheck, HelpCircle, Search, Loader2, Star, RefreshCcw, PlusCircle, UtensilsCrossed } from 'lucide-react';
+import { AlertTriangle, Target, FileText, Sparkles as QualitySparkles, ShieldCheck, Search, Loader2, Star, RefreshCcw, PlusCircle, UtensilsCrossed } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,30 +40,27 @@ import { collection, query, orderBy } from 'firebase/firestore';
 import { useAdmin } from '@/hooks/use-admin';
 import Link from 'next/link';
 
-// Fallback to exactly 9 unique dishes if database is empty
-const generateFallbackDishes = (): Dish[] => {
+const generateFallbackDishes = (category: Category | 'all'): Dish[] => {
     const dishes: Dish[] = [];
     const names = ['Oatmeal', 'Egg Omelette', 'Greek Yogurt', 'Avocado Toast', 'Fruit Salad', 'Pancakes', 'Shakshuka', 'Breakfast Burrito', 'Smoothie Bowl'];
     
     for (let i = 0; i < 9; i++) {
         dishes.push({
-            id: `fallback-${i}`,
+            id: `fallback-${category}-${i}`,
             name: { en: names[i], ar: names[i], ru: names[i] },
-            description: { en: 'Delicious and healthy diabetic-friendly meal.', ar: 'وجبة صحية لذيذة.', ru: 'Вкусное и полезное блюдо.' },
-            category: 'breakfast',
-            price: 250 + (i * 10),
-            calories: 150 + (i * 5),
+            description: { en: 'Delicious and healthy diabetic-friendly meal prepared with fresh ingredients.', ar: 'وجبة صحية لذيذة معدة بمكونات طازجة.', ru: 'Вкусное и полезное блюдо из свежих ингредиентов.' },
+            category: category === 'all' ? 'breakfast' : category,
+            price: 250 + (i * 15),
+            calories: 150 + (i * 10),
             protein: 10 + i,
             sugar: i % 2,
-            portionSize: "250g",
+            portionSize: i % 2 === 0 ? "250g" : "300ml",
             imageId: "1",
-            dailyTip: { en: 'Healthy choice!', ar: 'خيار صحي!', ru: 'Здоровый выбор!' }
+            dailyTip: { en: 'A great choice for a balanced diet!', ar: 'خيار رائع لنظام غذائي متوازن!', ru: 'Отличный выбор для сбалансированной диеты!' }
         });
     }
     return dishes;
 };
-
-const FALLBACK_DISHES = generateFallbackDishes();
 
 const categoryFilters: { id: Category | 'all'; labelKey: string; imageId: string }[] = [
   { id: 'all', labelKey: 'all_categories', imageId: 'category-main' },
@@ -204,7 +201,10 @@ export default function Home() {
 
   const { data: dbDishes, isLoading: dishesLoading } = useCollection<Dish>(dishesQuery);
 
-  const dishes = dbDishes && dbDishes.length > 0 ? dbDishes : FALLBACK_DISHES;
+  const dishes = useMemo(() => {
+    if (dbDishes && dbDishes.length > 0) return dbDishes;
+    return generateFallbackDishes(selectedCategory);
+  }, [dbDishes, selectedCategory]);
 
   const filteredDishes = useMemo(() => {
     if (!dishes) return [];
@@ -213,7 +213,7 @@ export default function Home() {
       const dishName = dish.name[locale] || dish.name['en'] || '';
       const matchesSearch = searchTerm === '' || dishName.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesCategory && matchesSearch;
-    });
+    }).slice(0, 9); // Always show exactly 9
   }, [dishes, selectedCategory, searchTerm, locale]);
 
   return (
@@ -271,7 +271,7 @@ export default function Home() {
         ) : filteredDishes.length > 0 ? (
           filteredDishes.map((dish: Dish) => <DishCard key={dish.id} dish={dish} />)
         ) : (
-           <div className="col-span-full text-center py-20 flex flex-col items-center gap-4 bg-muted/20 rounded-xl border border-dashed">
+           <div className="col-span-full text-center py-20 flex flex-col items-center gap-4 bg-muted/20 rounded-xl border border-dashed border-border/60">
                 <Search className="h-10 w-10 text-muted-foreground" />
                 <p className="text-xl font-semibold">{t('no_dishes_found')}</p>
                 <div className="flex gap-4">

@@ -10,7 +10,6 @@ const SUPER_ADMIN_UID = 'nWh4SGrdQYZs8wlTg1PqpXoQnB73';
 
 /**
  * A hook to determine the current user's administrative roles.
- * Provides absolute clarity on whether the user is a Super Admin, Admin, or Staff.
  */
 export function useAdmin() {
   const { user, isUserLoading } = useUser();
@@ -30,7 +29,7 @@ export function useAdmin() {
       return { isSuperAdmin: false, isAdmin: false, isStaff: false };
     }
     
-    // Hardcoded check for the absolute master admin UID found in your logs
+    // Hardcoded check for the absolute master admin UID
     const isSuperAdmin = user.uid === SUPER_ADMIN_UID;
 
     // Role-based check from Firestore document
