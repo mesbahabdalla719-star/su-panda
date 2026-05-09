@@ -28,11 +28,15 @@ Use this method when you have made changes to the code and want to sync them to 
 If `git push` fails with "Authentication failed" or "No anonymous write access":
 
 1.  **Generate a Token**: Go to GitHub -> Settings -> Developer Settings -> Personal Access Tokens (Classic) and create a token with `repo` permissions.
-2.  **Update Remote**: Run this command with your token:
+2.  **Update Remote**: Run this command replacing `YOUR_TOKEN` with your actual token. 
+    **IMPORTANT:** Do NOT include the `<` or `>` brackets.
     ```bash
-    git remote set-url origin https://<YOUR_TOKEN_HERE>@github.com/mesbahabdalla719-star/su-panda.git
+    git remote set-url origin https://YOUR_TOKEN@github.com/mesbahabdalla719-star/su-panda.git
     ```
-3.  **Try Pushing again**: `git push`
+3.  **Try Pushing again**: 
+    ```bash
+    git push
+    ```
 
 ---
 
@@ -65,8 +69,9 @@ Use this method only if you want to wipe your entire Git history and start fresh
     ```
 
 6.  **Connect to GitHub (using Token for safety)**:
+    Replace `YOUR_TOKEN` with your token (no brackets).
     ```bash
-    git remote add origin https://<YOUR_TOKEN_HERE>@github.com/mesbahabdalla719-star/su-panda.git
+    git remote add origin https://YOUR_TOKEN@github.com/mesbahabdalla719-star/su-panda.git
     ```
 
 7.  **Force push to overwrite history**:
