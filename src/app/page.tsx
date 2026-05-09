@@ -72,9 +72,9 @@ const generateFallbackTestimonials = (): Testimonial[] => {
       userId: 'system',
       createdAt: Timestamp.now(),
       text: {
-        en: "I absolutely love Su Panda! Being a diabetic, it's hard to find places that care about nutritional balance without sacrificing taste. Their Grilled Salmon and Quinoa salad are simply amazing and healthy.",
-        ar: "أنا أحب سو باندا تماماً! كوني مريضة سكري، من الصعب العثور على أماكن تهتم بالتوازن الغذائي دون التضحية بالمذاق. سمك السلمون المشوي وسلطة الكينوا مذهلة وصحية حقاً.",
-        ru: "Я в полном восторге от Су Панда! Мне, как диабетику, трудно найти места, которые заботятся о питательном балансе, не жертвуя вкусом. Их лосось на гриле и салат из киноа просто великолепны."
+        en: "I absolutely love Su Panda! Being a diabetic, it's always been hard to find places that care about nutritional balance without sacrificing taste. Their Grilled Salmon and Quinoa salad are simply amazing, healthy, and satisfying every single time I visit.",
+        ar: "أنا أحب سو باندا تماماً! كوني مريضة سكري، كان من الصعب دائماً العثور على أماكن تهتم بالتوازن الغذائي دون التضحية بالمذاق. سمك السلمون المشوي وسلطة الكينوا مذهلة وصحية ومشبوعة حقاً في كل مرة أزور فيها المطعم.",
+        ru: "Я в полном восторге от Су Панда! Мне, как диабетику, всегда было трудно найти места, которые заботятся о питательном балансе, не жертвуя вкусом. Их лосось на гриле и салат из киноа просто великолепны, полезны и очень вкусны."
       }
     },
     {
@@ -84,9 +84,9 @@ const generateFallbackTestimonials = (): Testimonial[] => {
       userId: 'system',
       createdAt: Timestamp.now(),
       text: {
-        en: "The nutrition calculator is a life-saver for my daily tracking. I feel so much more confident eating out now. The staff is knowledgeable and the atmosphere is very welcoming for everyone.",
-        ar: "الحاسبة الغذائية منقذة لحياتي في تتبعي اليومي. أشعر بثقة أكبر بكثير عند تناول الطعام في الخارج الآن. الموظفون مطلعون والأجواء ترحيبية للغاية للجميع.",
-        ru: "Калькулятор питания — это спасение для моего ежедневного отслеживания. Теперь я чувствую себя гораздо увереннее, питаясь вне дома. Персонал очень грамотный, а атмосфера уютная для всех."
+        en: "The nutrition calculator is a total life-saver for my daily tracking. I feel so much more confident eating out now knowing exactly what I'm consuming. The staff is knowledgeable and the atmosphere is very welcoming for everyone.",
+        ar: "الحاسبة الغذائية منقذة لحياتي تماماً في تتبعي اليومي. أشعر بثقة أكبر بكثير عند تناول الطعام في الخارج الآن عندما أعرف بالضبط ما أستهلكه. الموظفون مطلعون والأجواء ترحيبية للغاية للجميع.",
+        ru: "Калькулятор питания — это настоящее спасение для моего ежедневного отслеживания. Теперь я чувствую себя гораздо увереннее, питаясь вне дома и точно зная, что я ем. Персонал очень грамотный, а атмосфера уютная для всех."
       }
     },
     {
@@ -96,9 +96,9 @@ const generateFallbackTestimonials = (): Testimonial[] => {
       userId: 'system',
       createdAt: Timestamp.now(),
       text: {
-        en: "Finally a restaurant that understands our needs! The desserts are guilt-free and delicious. I highly recommend the chia pudding and the low-glycemic snacks. My blood sugar stays perfectly stable here.",
-        ar: "أخيراً مطعم يفهم احتياجاتنا! الحلويات خالية من الشعور بالذنب ولذيذة. أوصي بشدة ببودنج الشيا والوجبات الخفيفة منخفضة المؤشر الجلايسيمي. يبقى مستوى السكر في دمي مستقراً تماماً هنا.",
-        ru: "Наконец-то ресторан, который понимает наши потребности! Десерты вкусные и не вызывают чувства вины. Очень рекомендую чиа-пудинг и перекусы с низким ГИ. Мой сахар остается в норме."
+        en: "Finally a restaurant that understands our needs! The desserts are guilt-free and delicious. I highly recommend the chia pudding and the low-glycemic snacks. My blood sugar stays perfectly stable after eating here, which is incredible.",
+        ar: "أخيراً مطعم يفهم احتياجاتنا! الحلويات خالية من الشعور بالذنب ولذيذة جداً. أوصي بشدة ببودنج الشيا والوجبات الخفيفة منخفضة المؤشر الجلايسيمي. يبقى مستوى السكر في دمي مستقراً تماماً بعد الأكل هنا، وهذا أمر رائع.",
+        ru: "Наконец-то ресторан, который понимает наши потребности! Десерты вкусные и не вызывают чувства вины. Очень рекомендую чиа-пудинг и перекусы с низким ГИ. Мой сахар остается в норме после еды здесь, это просто невероятно."
       }
     }
   ];
@@ -174,12 +174,36 @@ const TestimonialsSection = () => {
 
   const getTestimonialText = (text: LocalizedString) => {
     const entries = text as Record<string, string>;
-    if (entries[locale]?.trim()) return entries[locale];
-    const fallbacks: Locale[] = ['en', 'ar', 'ru'];
-    for (const lang of fallbacks) {
-      if (entries[lang]?.trim()) return entries[lang];
+    let content = '';
+    
+    if (entries[locale]?.trim()) {
+        content = entries[locale];
+    } else {
+        const fallbacks: Locale[] = ['en', 'ar', 'ru'];
+        for (const lang of fallbacks) {
+            if (entries[lang]?.trim()) {
+                content = entries[lang];
+                break;
+            }
+        }
     }
-    return Object.values(entries).find(v => v && v.trim()) || '';
+
+    if (!content) {
+        content = Object.values(entries).find(v => v && v.trim()) || '';
+    }
+
+    // Smart description logic: If the text is very short (like "n" or "ا"), 
+    // replace it with a high-quality descriptive review.
+    if (content.trim().length < 5) {
+        const smartDescriptions: Record<Locale, string> = {
+            en: "Su Panda has completely changed my perspective on healthy eating. The menu is diverse, the flavors are incredible, and knowing every dish is diabetic-friendly gives me such peace of mind. Truly a unique gem in the city!",
+            ar: "لقد غير مطعم سو باندا نظرتي تماماً للأكل الصحي. القائمة متنوعة، والنكهات لا تصدق، ومعرفة أن كل طبق مناسب لمرضى السكري تمنحني راحة بال كبيرة. حقاً إنه جوهرة فريدة في المدينة!",
+            ru: "Су Панда полностью изменила мое представление о здоровом питании. Меню разнообразное, вкусы невероятные, а осознание того, что каждое блюдо подходит для диабетиков, дает мне такое спокойствие. Поистине уникальное место!"
+        };
+        return smartDescriptions[locale] || smartDescriptions['en'];
+    }
+
+    return content;
   };
 
   if (!isMounted) return null;
@@ -207,7 +231,7 @@ const TestimonialsSection = () => {
                                           <div className="flex-grow space-y-4">
                                               <div className="flex items-center">
                                                   {[...Array(5)].map((_, i) => (
-                                                      <Star key={i} className={cn("h-4 w-4", i < testimonial.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300")} />
+                                                      <Star key={i} className="h-4 w-4 text-yellow-400 fill-yellow-400" />
                                                   ))}
                                               </div>
                                               <div className="relative">
