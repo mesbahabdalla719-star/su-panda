@@ -86,7 +86,7 @@ const generateFallbackTestimonials = (): Testimonial[] => {
       text: {
         en: "The nutrition calculator is a total life-saver for my daily tracking. I feel so much more confident eating out now knowing exactly what I'm consuming. The staff is knowledgeable and the atmosphere is very welcoming for everyone.",
         ar: "الحاسبة الغذائية منقذة لحياتي تماماً في تتبعي اليومي. أشعر بثقة أكبر بكثير عند تناول الطعام في الخارج الآن عندما أعرف بالضبط ما أستهلكه. الموظفون مطلعون والأجواء ترحيبية للغاية للجميع.",
-        ru: "Калькулятор питания — это настоящее спасение для моего ежедневного отслеживания. Теперь я чувствую себя гораздо увереннее, питаясь вне дома и точно зная, что я ем. Персонал очень грамотный, а атмосфера уютная для всех."
+        ru: "Калькулятор питания — это настоящее спасение для моего ежедневного отслеживания. Теперь я чувствую увереннее, питаясь вне дома и точно зная, что я ем. Персонал очень грамотный, а атмосфера уютная для всех."
       }
     },
     {
@@ -172,7 +172,7 @@ const TestimonialsSection = () => {
     return generateFallbackTestimonials();
   }, [dbTestimonials]);
 
-  const getTestimonialText = (text: LocalizedString) => {
+  const getTestimonialText = (text: LocalizedString, id: string) => {
     const entries = text as Record<string, string>;
     let content = '';
     
@@ -192,15 +192,32 @@ const TestimonialsSection = () => {
         content = Object.values(entries).find(v => v && v.trim()) || '';
     }
 
-    // Smart description logic: If the text is very short (like "n" or "ا"), 
-    // replace it with a high-quality descriptive review.
+    // Smart description logic: If the text is very short, replace it with unique descriptive reviews.
     if (content.trim().length < 5) {
-        const smartDescriptions: Record<Locale, string> = {
-            en: "Su Panda has completely changed my perspective on healthy eating. The menu is diverse, the flavors are incredible, and knowing every dish is diabetic-friendly gives me such peace of mind. Truly a unique gem in the city!",
-            ar: "لقد غير مطعم سو باندا نظرتي تماماً للأكل الصحي. القائمة متنوعة، والنكهات لا تصدق، ومعرفة أن كل طبق مناسب لمرضى السكري تمنحني راحة بال كبيرة. حقاً إنه جوهرة فريدة في المدينة!",
-            ru: "Су Панда полностью изменила мое представление о здоровом питании. Меню разнообразное, вкусы невероятные, а осознание того, что каждое блюдо подходит для диабетиков, дает мне такое спокойствие. Поистине уникальное место!"
+        // Use the ID to select one of the variations so they aren't all the same
+        const charCodeSum = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const variation = charCodeSum % 3;
+
+        const variations: Record<Locale, string[]> = {
+            en: [
+                "Su Panda has completely changed my perspective on healthy eating. The menu is diverse, the flavors are incredible, and knowing every dish is diabetic-friendly gives me such peace of mind. Truly a unique gem in the city!",
+                "I was skeptical at first, but the quality of ingredients and the careful preparation really shine through. The staff is incredibly knowledgeable about nutrition, which makes dining here a safe and delightful experience for my family.",
+                "Finding a place that balances low glycemic index with amazing taste is a dream come true. The atmosphere is warm and the food is consistently delicious. I highly recommend the daily specials to anyone tracking their health!"
+            ],
+            ar: [
+                "لقد غير مطعم سو باندا نظرتي تماماً للأكل الصحي. القائمة متنوعة، والنكهات لا تصدق، ومعرفة أن كل طبق مناسب لمرضى السكري تمنحني راحة بال كبيرة. حقاً إنه جوهرة فريدة في المدينة!",
+                "كنت متشككاً في البداية، لكن جودة المكونات والتحضير الدقيق يبرزان حقاً. الموظفون مطلعون بشكل لا يصدق على التغذية، مما يجعل تناول الطعام هنا تجربة آمنة وممتعة لعائلتي.",
+                "العثور على مكان يوازن بين المؤشر الجلايسيمي المنخفض والمذاق الرائع هو حلم تحقق. الأجواء دافئة والطعام لذيذ باستمرار. أوصي بشدة بالأطباق اليومية الخاصة لأي شخص يهتم بصحته!"
+            ],
+            ru: [
+                "Су Панда полностью изменила мое представление о здоровом питании. Меню разнообразное, вкусы невероятные, а осознание того, что каждое блюдо подходит для диабетиков, дает мне такое спокойствие. Поистине уникальное место!",
+                "Сначала я был настроен скептически, но качество ингредиентов и тщательное приготовление действительно впечатляют. Персонал невероятно осведомлен в вопросах питания, что делает посещение этого места безопасным и приятным.",
+                "Найти место, где сочетаются низкий гликемический индекс и потрясающий вкус — это мечта. Атмосфера уютная, а еда всегда на высоте. Очень рекомендую ежедневные специальные предложения всем, кто следит за своим здоровьем!"
+            ]
         };
-        return smartDescriptions[locale] || smartDescriptions['en'];
+
+        const list = variations[locale] || variations['en'];
+        return list[variation % list.length];
     }
 
     return content;
@@ -220,7 +237,7 @@ const TestimonialsSection = () => {
                 <Carousel opts={{ align: "start", loop: true, direction: direction }} className="w-full max-w-6xl mx-auto">
                     <CarouselContent>
                         {testimonials.map((testimonial) => {
-                           const content = getTestimonialText(testimonial.text);
+                           const content = getTestimonialText(testimonial.text, testimonial.id);
                            return (
                              <CarouselItem key={testimonial.id} className="md:basis-1/2 lg:basis-1/3 p-2">
                                   <Card className="flex flex-col h-full bg-card/70 border-border/50 hover:shadow-md transition-shadow relative overflow-hidden group">
