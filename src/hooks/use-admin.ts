@@ -5,11 +5,12 @@ import { useFirebase } from '@/firebase/provider';
 import type { Customer } from '@/lib/types';
 import { useMemo } from 'react';
 
-// THIS UID MUST MATCH THE ONE IN YOUR FIREBASE AUTH CONSOLE
+// MASTER ADMIN UID for mesbahabdalla719@gmail.com
 const SUPER_ADMIN_UID = 'nWh4SGrdQYZs8wlTg1PqpXoQnB73';
 
 /**
  * A hook to determine the current user's administrative roles.
+ * Provides absolute clarity on whether the user is a Super Admin, Admin, or Staff.
  */
 export function useAdmin() {
   const { user, isUserLoading } = useUser();
@@ -24,12 +25,12 @@ export function useAdmin() {
 
   const isLoading = isUserLoading || (!!user && isCustomerLoading);
 
-  const { isSuperAdmin, isAdmin, isStaff } = useMemo(() => {
+  const roles = useMemo(() => {
     if (isLoading || !user) {
       return { isSuperAdmin: false, isAdmin: false, isStaff: false };
     }
     
-    // Hardcoded check for the absolute master admin UID
+    // Hardcoded check for the absolute master admin UID found in your logs
     const isSuperAdmin = user.uid === SUPER_ADMIN_UID;
 
     // Role-based check from Firestore document
@@ -43,8 +44,6 @@ export function useAdmin() {
   return {
     user,
     isLoading,
-    isSuperAdmin,
-    isAdmin,
-    isStaff,
+    ...roles
   };
 }

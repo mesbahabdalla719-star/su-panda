@@ -5,13 +5,14 @@ import { useCollection, useMemoFirebase } from '@/firebase';
 import { collectionGroup, query, orderBy } from 'firebase/firestore';
 import { useFirebase } from '@/firebase/provider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, DollarSign, Package, Hourglass, ShoppingBag, ShieldAlert, AlertCircle } from 'lucide-react';
+import { Loader2, DollarSign, Package, Hourglass, ShoppingBag, ShieldAlert, AlertCircle, RefreshCcw } from 'lucide-react';
 import type { Order } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { ar, enUS, ru } from 'date-fns/locale';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useAdmin } from '@/hooks/use-admin';
+import { Button } from '@/components/ui/button';
 
 function StatCard({ title, value, icon, description }: { title: string; value: string; icon: React.ReactNode, description?: string }) {
     return (
@@ -40,7 +41,7 @@ function RevenueChart({ data, t }: { data: { name: string; total: number }[], t:
                     labelStyle={{ color: 'hsl(var(--foreground))' }}
                 />
                 <Legend />
-                <Bar dataKey="total" name={t('revenue')} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="total" name={t('revenue') || 'Revenue'} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
             </BarChart>
         </ResponsiveContainer>
     );
@@ -92,6 +93,7 @@ export default function DashboardPage() {
     }
 
     if (error) {
+        const isIndexError = error.message.toLowerCase().includes('index');
         return (
             <div className="space-y-6">
                 <h2 className="text-3xl font-bold tracking-tight">{t('admin_dashboard')}</h2>
@@ -99,18 +101,26 @@ export default function DashboardPage() {
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-destructive">
                             <AlertCircle className="h-5 w-5" />
-                            Data Access Error
+                            {isIndexError ? 'Database Index Required' : 'Data Access Error'}
                         </CardTitle>
                         <CardDescription>
-                            There was a problem loading the dashboard data.
+                            {isIndexError 
+                                ? 'A Firestore composite index is required for this dashboard to work.' 
+                                : 'There was a problem loading the dashboard data.'}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <p className="text-sm font-mono bg-muted p-3 rounded border">{error.message}</p>
-                        {error.message.includes('index') && (
-                            <p className="text-sm text-muted-foreground italic">
-                                Tip: This dashboard uses a collection group query. If this is a new project, you may need to click the link in the error message (check browser console) to create the required Firestore index.
-                            </p>
+                        <p className="text-sm font-mono bg-muted p-3 rounded border break-all">{error.message}</p>
+                        {isIndexError && (
+                            <div className="space-y-4">
+                                <p className="text-sm text-muted-foreground italic">
+                                    <strong>Solution:</strong> Look at your browser console (press F12). Firebase will have printed a link that you can click to automatically create the required index in the Firebase Console.
+                                </p>
+                                <Button onClick={() => window.location.reload()} variant="outline">
+                                    <RefreshCcw className="mr-2 h-4 w-4" />
+                                    Reload Page after Indexing
+                                </Button>
+                            </div>
                         )}
                     </CardContent>
                 </Card>

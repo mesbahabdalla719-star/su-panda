@@ -18,7 +18,7 @@ service cloud.firestore {
     }
 
     // --- COLLECTION GROUP RULES ---
-    // These are critical for collectionGroup('orders') queries used in Admin Dashboard
+    // These are critical for the 'All Orders' dashboard view
     match /{path=**}/orders/{orderId} {
       allow list, get: if isSuperAdmin();
       allow get: if isSignedIn() && (resource.data.userId == request.auth.uid);
