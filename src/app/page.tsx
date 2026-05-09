@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { DishCard } from '@/components/dish-card';
 import type { Category, Dish, Testimonial, LocalizedString, Locale } from '@/lib/types';
 import { useLanguage } from '@/context/language-context';
-import { AlertTriangle, Target, FileText, Sparkles as QualitySparkles, ShieldCheck, Search, Loader2, Star, RefreshCcw, PlusCircle, UtensilsCrossed } from 'lucide-react';
+import { AlertTriangle, Target, FileText, Sparkles as QualitySparkles, ShieldCheck, Search, Loader2, Star, RefreshCcw, PlusCircle, UtensilsCrossed, Quote } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +39,7 @@ import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { useAdmin } from '@/hooks/use-admin';
 import Link from 'next/link';
+import { Timestamp } from 'firebase/firestore';
 
 const generateFallbackDishes = (category: Category | 'all'): Dish[] => {
     const dishes: Dish[] = [];
@@ -60,6 +61,47 @@ const generateFallbackDishes = (category: Category | 'all'): Dish[] => {
         });
     }
     return dishes;
+};
+
+const generateFallbackTestimonials = (): Testimonial[] => {
+  return [
+    {
+      id: 'fallback-1',
+      author: 'Sarah Johnson',
+      rating: 5,
+      userId: 'system',
+      createdAt: Timestamp.now(),
+      text: {
+        en: "I absolutely love Su Panda! Being a diabetic, it's hard to find places that care about nutritional balance without sacrificing taste. Their Grilled Salmon and Quinoa salad are simply amazing and healthy.",
+        ar: "أنا أحب سو باندا تماماً! كوني مريضة سكري، من الصعب العثور على أماكن تهتم بالتوازن الغذائي دون التضحية بالمذاق. سمك السلمون المشوي وسلطة الكينوا مذهلة وصحية حقاً.",
+        ru: "Я в полном восторге от Су Панда! Мне, как диабетику, трудно найти места, которые заботятся о питательном балансе, не жертвуя вкусом. Их лосось на гриле и салат из киноа просто великолепны."
+      }
+    },
+    {
+      id: 'fallback-2',
+      author: 'Michael Chen',
+      rating: 5,
+      userId: 'system',
+      createdAt: Timestamp.now(),
+      text: {
+        en: "The nutrition calculator is a life-saver for my daily tracking. I feel so much more confident eating out now. The staff is knowledgeable and the atmosphere is very welcoming for everyone.",
+        ar: "الحاسبة الغذائية منقذة لحياتي في تتبعي اليومي. أشعر بثقة أكبر بكثير عند تناول الطعام في الخارج الآن. الموظفون مطلعون والأجواء ترحيبية للغاية للجميع.",
+        ru: "Калькулятор питания — это спасение для моего ежедневного отслеживания. Теперь я чувствую себя гораздо увереннее, питаясь вне дома. Персонал очень грамотный, а атмосфера уютная для всех."
+      }
+    },
+    {
+      id: 'fallback-3',
+      author: 'Elena Petrova',
+      rating: 5,
+      userId: 'system',
+      createdAt: Timestamp.now(),
+      text: {
+        en: "Finally a restaurant that understands our needs! The desserts are guilt-free and delicious. I highly recommend the chia pudding and the low-glycemic snacks. My blood sugar stays perfectly stable here.",
+        ar: "أخيراً مطعم يفهم احتياجاتنا! الحلويات خالية من الشعور بالذنب ولذيذة. أوصي بشدة ببودنج الشيا والوجبات الخفيفة منخفضة المؤشر الجلايسيمي. يبقى مستوى السكر في دمي مستقراً تماماً هنا.",
+        ru: "Наконец-то ресторан, который понимает наши потребности! Десерты вкусные и не вызывают чувства вины. Очень рекомендую чиа-пудинг и перекусы с низким ГИ. Мой сахар остается в норме."
+      }
+    }
+  ];
 };
 
 const categoryFilters: { id: Category | 'all'; labelKey: string; imageId: string }[] = [
@@ -123,20 +165,20 @@ const TestimonialsSection = () => {
     return query(collection(firestore, 'testimonials'), orderBy('createdAt', 'desc'));
   }, [firestore]);
   
-  const { data: testimonialsData, isLoading } = useCollection<Testimonial>(testimonialsQuery);
+  const { data: dbTestimonials, isLoading } = useCollection<Testimonial>(testimonialsQuery);
+
+  const testimonials = useMemo(() => {
+    if (dbTestimonials && dbTestimonials.length > 0) return dbTestimonials;
+    return generateFallbackTestimonials();
+  }, [dbTestimonials]);
 
   const getTestimonialText = (text: LocalizedString) => {
     const entries = text as Record<string, string>;
-    // 1. Try current locale
     if (entries[locale]?.trim()) return entries[locale];
-    
-    // 2. Fallback to any language that has content
     const fallbacks: Locale[] = ['en', 'ar', 'ru'];
     for (const lang of fallbacks) {
       if (entries[lang]?.trim()) return entries[lang];
     }
-
-    // 3. Absolute last resort: find any non-empty string
     return Object.values(entries).find(v => v && v.trim()) || '';
   };
 
@@ -148,32 +190,34 @@ const TestimonialsSection = () => {
         <div className="container mx-auto text-center">
             <h2 className="text-3xl font-bold font-headline">{t('customer_testimonials')}</h2>
             <p className="max-w-2xl mx-auto mt-2 text-muted-foreground mb-8">{t('customer_testimonials_desc')}</p>
-            {(!testimonialsData || testimonialsData.length === 0) ? (
+            {(!testimonials || testimonials.length === 0) ? (
                  <p className="text-muted-foreground">{t('no_testimonials_yet')}</p>
             ) : (
                 <Carousel opts={{ align: "start", loop: true, direction: direction }} className="w-full max-w-6xl mx-auto">
                     <CarouselContent>
-                        {testimonialsData.map((testimonial) => {
+                        {testimonials.map((testimonial) => {
                            const content = getTestimonialText(testimonial.text);
                            return (
                              <CarouselItem key={testimonial.id} className="md:basis-1/2 lg:basis-1/3 p-2">
-                                  <Card className="flex flex-col h-full bg-card/70 border-border/50 hover:shadow-md transition-shadow">
+                                  <Card className="flex flex-col h-full bg-card/70 border-border/50 hover:shadow-md transition-shadow relative overflow-hidden group">
+                                      <div className="absolute top-4 right-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                                          <Quote className="h-12 w-12 text-primary" />
+                                      </div>
                                       <CardContent className="p-6 flex flex-col flex-grow text-start">
                                           <div className="flex-grow space-y-4">
                                               <div className="flex items-center">
                                                   {[...Array(5)].map((_, i) => (
-                                                      <Star key={i} className={cn("h-5 w-5", i < testimonial.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300")} />
+                                                      <Star key={i} className={cn("h-4 w-4", i < testimonial.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300")} />
                                                   ))}
                                               </div>
                                               <div className="relative">
-                                                <span className="text-4xl text-primary/20 absolute -top-4 -left-2 font-serif">"</span>
-                                                <p className="text-muted-foreground italic text-sm relative z-10 pl-4" dir="auto">
-                                                    {content}
+                                                <p className="text-foreground font-medium text-base leading-relaxed italic" dir="auto">
+                                                    "{content}"
                                                 </p>
                                               </div>
                                           </div>
-                                          <div className="flex items-center gap-4 mt-6 pt-6 border-t">
-                                              <Avatar className="h-10 w-10">
+                                          <div className="flex items-center gap-4 mt-6 pt-6 border-t border-border/40">
+                                              <Avatar className="h-10 w-10 border-2 border-primary/10">
                                                 <AvatarFallback className="bg-primary/10 text-primary font-bold">
                                                   {testimonial.author.substring(0, 2).toUpperCase()}
                                                 </AvatarFallback>
