@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { DishCard } from '@/components/dish-card';
-import type { Category, Dish, Testimonial, LocalizedString } from '@/lib/types';
+import type { Category, Dish, Testimonial, LocalizedString, Locale } from '@/lib/types';
 import { useLanguage } from '@/context/language-context';
 import { AlertTriangle, Target, FileText, Sparkles as QualitySparkles, ShieldCheck, Search, Loader2, Star, RefreshCcw, PlusCircle, UtensilsCrossed } from 'lucide-react';
 import {
@@ -126,14 +126,18 @@ const TestimonialsSection = () => {
   const { data: testimonialsData, isLoading } = useCollection<Testimonial>(testimonialsQuery);
 
   const getTestimonialText = (text: LocalizedString) => {
-      // Priority: Current Locale -> English -> Russian -> Arabic -> First available
-      if (text[locale]) return text[locale];
-      if (text['en']) return text['en'];
-      if (text['ru']) return text['ru'];
-      if (text['ar']) return text['ar'];
-      // Final fallback: find any non-empty string in the object
-      const firstAvailable = Object.values(text).find(val => typeof val === 'string' && val.length > 0);
-      return firstAvailable || '';
+    const entries = text as Record<string, string>;
+    // 1. Try current locale
+    if (entries[locale]?.trim()) return entries[locale];
+    
+    // 2. Fallback to any language that has content
+    const fallbacks: Locale[] = ['en', 'ar', 'ru'];
+    for (const lang of fallbacks) {
+      if (entries[lang]?.trim()) return entries[lang];
+    }
+
+    // 3. Absolute last resort: find any non-empty string
+    return Object.values(entries).find(v => v && v.trim()) || '';
   };
 
   if (!isMounted) return null;
@@ -149,38 +153,41 @@ const TestimonialsSection = () => {
             ) : (
                 <Carousel opts={{ align: "start", loop: true, direction: direction }} className="w-full max-w-6xl mx-auto">
                     <CarouselContent>
-                        {testimonialsData.map((testimonial) => (
-                           <CarouselItem key={testimonial.id} className="md:basis-1/2 lg:basis-1/3 p-2">
-                                <Card className="flex flex-col h-full bg-card/70 border-border/50 hover:shadow-md transition-shadow">
-                                    <CardContent className="p-6 flex flex-col flex-grow text-left" dir="ltr">
-                                        <div className="flex-grow space-y-4">
-                                            <div className="flex items-center">
-                                                {[...Array(5)].map((_, i) => (
-                                                    <Star key={i} className={cn("h-5 w-5", i < testimonial.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300")} />
-                                                ))}
-                                            </div>
-                                            <div className="relative">
-                                              <span className="text-4xl text-primary/20 absolute -top-4 -left-2 font-serif">"</span>
-                                              <p className="text-muted-foreground italic text-sm relative z-10 pl-4">
-                                                  {getTestimonialText(testimonial.text)}
-                                              </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-4 mt-6 pt-6 border-t">
-                                            <Avatar className="h-10 w-10">
-                                              <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                                                {testimonial.author.substring(0, 2).toUpperCase()}
-                                              </AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <p className="font-semibold text-sm">{testimonial.author}</p>
-                                                <p className="text-xs text-muted-foreground">{t('satisfied_customer')}</p>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                           </CarouselItem>
-                        ))}
+                        {testimonialsData.map((testimonial) => {
+                           const content = getTestimonialText(testimonial.text);
+                           return (
+                             <CarouselItem key={testimonial.id} className="md:basis-1/2 lg:basis-1/3 p-2">
+                                  <Card className="flex flex-col h-full bg-card/70 border-border/50 hover:shadow-md transition-shadow">
+                                      <CardContent className="p-6 flex flex-col flex-grow text-start">
+                                          <div className="flex-grow space-y-4">
+                                              <div className="flex items-center">
+                                                  {[...Array(5)].map((_, i) => (
+                                                      <Star key={i} className={cn("h-5 w-5", i < testimonial.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300")} />
+                                                  ))}
+                                              </div>
+                                              <div className="relative">
+                                                <span className="text-4xl text-primary/20 absolute -top-4 -left-2 font-serif">"</span>
+                                                <p className="text-muted-foreground italic text-sm relative z-10 pl-4" dir="auto">
+                                                    {content}
+                                                </p>
+                                              </div>
+                                          </div>
+                                          <div className="flex items-center gap-4 mt-6 pt-6 border-t">
+                                              <Avatar className="h-10 w-10">
+                                                <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                                                  {testimonial.author.substring(0, 2).toUpperCase()}
+                                                </AvatarFallback>
+                                              </Avatar>
+                                              <div>
+                                                  <p className="font-semibold text-sm">{testimonial.author}</p>
+                                                  <p className="text-xs text-muted-foreground">{t('satisfied_customer')}</p>
+                                              </div>
+                                          </div>
+                                      </CardContent>
+                                  </Card>
+                             </CarouselItem>
+                           );
+                        })}
                     </CarouselContent>
                     <CarouselPrevious className="hidden sm:flex" />
                     <CarouselNext className="hidden sm:flex" />
