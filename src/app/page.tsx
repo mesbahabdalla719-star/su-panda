@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { DishCard } from '@/components/dish-card';
-import type { Category, Dish, Testimonial } from '@/lib/types';
+import type { Category, Dish, Testimonial, LocalizedString } from '@/lib/types';
 import { useLanguage } from '@/context/language-context';
 import { AlertTriangle, Target, FileText, Sparkles as QualitySparkles, ShieldCheck, Search, Loader2, Star, RefreshCcw, PlusCircle, UtensilsCrossed } from 'lucide-react';
 import {
@@ -112,12 +112,31 @@ const WhySuPanda = () => {
 const TestimonialsSection = () => {
   const { t, locale, direction } = useLanguage();
   const { firestore } = useFirebase();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const testimonialsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'testimonials'), orderBy('createdAt', 'desc'));
   }, [firestore]);
+  
   const { data: testimonialsData, isLoading } = useCollection<Testimonial>(testimonialsQuery);
 
+  const getTestimonialText = (text: LocalizedString) => {
+      // Priority: Current Locale -> English -> Russian -> Arabic -> First available
+      if (text[locale]) return text[locale];
+      if (text['en']) return text['en'];
+      if (text['ru']) return text['ru'];
+      if (text['ar']) return text['ar'];
+      // Final fallback: find any non-empty string in the object
+      const firstAvailable = Object.values(text).find(val => typeof val === 'string' && val.length > 0);
+      return firstAvailable || '';
+  };
+
+  if (!isMounted) return null;
   if (isLoading) return <div className="py-20 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
@@ -131,22 +150,31 @@ const TestimonialsSection = () => {
                 <Carousel opts={{ align: "start", loop: true, direction: direction }} className="w-full max-w-6xl mx-auto">
                     <CarouselContent>
                         {testimonialsData.map((testimonial) => (
-                           <CarouselItem key={testimonial.id} className="md:basis-1/2 lg:basis-1/3 p-1">
-                                <Card className="flex flex-col h-full bg-card/70 border-border/50">
-                                    <CardContent className="p-6 flex flex-col flex-grow">
-                                        <div className="flex-grow">
-                                            <div className="flex items-center mb-4">
+                           <CarouselItem key={testimonial.id} className="md:basis-1/2 lg:basis-1/3 p-2">
+                                <Card className="flex flex-col h-full bg-card/70 border-border/50 hover:shadow-md transition-shadow">
+                                    <CardContent className="p-6 flex flex-col flex-grow text-left" dir="ltr">
+                                        <div className="flex-grow space-y-4">
+                                            <div className="flex items-center">
                                                 {[...Array(5)].map((_, i) => (
                                                     <Star key={i} className={cn("h-5 w-5", i < testimonial.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300")} />
                                                 ))}
                                             </div>
-                                            <blockquote className="text-muted-foreground italic text-sm">"{testimonial.text[locale] || testimonial.text['en']}"</blockquote>
+                                            <div className="relative">
+                                              <span className="text-4xl text-primary/20 absolute -top-4 -left-2 font-serif">"</span>
+                                              <p className="text-muted-foreground italic text-sm relative z-10 pl-4">
+                                                  {getTestimonialText(testimonial.text)}
+                                              </p>
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-4 mt-6 pt-6 border-t">
-                                            <Avatar><AvatarFallback>{testimonial.author.substring(0, 2)}</AvatarFallback></Avatar>
+                                            <Avatar className="h-10 w-10">
+                                              <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                                                {testimonial.author.substring(0, 2).toUpperCase()}
+                                              </AvatarFallback>
+                                            </Avatar>
                                             <div>
-                                                <p className="font-semibold">{testimonial.author}</p>
-                                                <p className="text-sm text-muted-foreground">{t('satisfied_customer')}</p>
+                                                <p className="font-semibold text-sm">{testimonial.author}</p>
+                                                <p className="text-xs text-muted-foreground">{t('satisfied_customer')}</p>
                                             </div>
                                         </div>
                                     </CardContent>
