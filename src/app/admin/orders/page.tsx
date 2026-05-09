@@ -2,11 +2,11 @@
 
 import { useLanguage } from '@/context/language-context';
 import { useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, orderBy, collectionGroup } from 'firebase/firestore';
+import { doc, query, orderBy, collectionGroup } from 'firebase/firestore';
 import { useFirebase } from '@/firebase/provider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, ShieldAlert } from 'lucide-react';
+import { Loader2, ShieldAlert, AlertCircle, RefreshCcw } from 'lucide-react';
 import type { Order } from '@/lib/types';
 import {
   Select,
@@ -80,7 +80,40 @@ function SuperAdminOrdersTable() {
   }
 
   if (error) {
-    return <p className="text-destructive">{t('orders_load_error')}: {error.message}</p>;
+    const isIndexError = error.message.toLowerCase().includes('index');
+    return (
+        <Card className="border-destructive/50 bg-destructive/5">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                    <AlertCircle className="h-5 w-5" />
+                    {isIndexError ? 'Database Index Required' : 'Data Access Error'}
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <p className="text-sm">{error.message}</p>
+                {isIndexError && (
+                    <div className="space-y-4">
+                        <p className="text-xs text-muted-foreground">
+                            <strong>Solution:</strong> A "Collection Group Index" is required. Please check your browser console (F12) for a generated setup link from Firebase.
+                        </p>
+                        <Button onClick={() => window.location.reload()} variant="outline" size="sm">
+                            <RefreshCcw className="mr-2 h-3 w-3" />
+                            Reload Page
+                        </Button>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+  }
+
+  if (!orders || orders.length === 0) {
+      return (
+          <div className="text-center py-20 bg-muted/10 rounded-lg border border-dashed">
+              <ShoppingBag className="h-10 w-10 text-muted-foreground mx-auto mb-2 opacity-20" />
+              <p className="text-muted-foreground">No orders placed yet.</p>
+          </div>
+      );
   }
 
   return (
@@ -96,7 +129,7 @@ function SuperAdminOrdersTable() {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {orders && orders.map((order) => (
+        {orders.map((order) => (
           <TableRow key={order.id}>
             <TableCell className="font-medium">{order.id.slice(0, 6)}...</TableCell>
             <TableCell>{order.customerDetails.fullName}</TableCell>

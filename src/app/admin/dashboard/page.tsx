@@ -40,7 +40,6 @@ function RevenueChart({ data, t }: { data: { name: string; total: number }[], t:
                     contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}
                     labelStyle={{ color: 'hsl(var(--foreground))' }}
                 />
-                <Legend />
                 <Bar dataKey="total" name={t('revenue') || 'Revenue'} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
             </BarChart>
         </ResponsiveContainer>
@@ -54,7 +53,6 @@ export default function DashboardPage() {
 
     const ordersQuery = useMemoFirebase(() => {
         if (!isSuperAdmin || !firestore) return null;
-        // Collection group queries require an index in Firestore Console
         return query(collectionGroup(firestore, 'orders'), orderBy('createdAt', 'desc'));
     }, [isSuperAdmin, firestore]);
 
@@ -128,38 +126,12 @@ export default function DashboardPage() {
         );
     }
     
-    if (!orders || orders.length === 0) {
-        return (
-            <div className="space-y-6">
-                <h2 className="text-3xl font-bold tracking-tight">{t('admin_dashboard')}</h2>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>No Orders Found</CardTitle>
-                        <CardDescription>The system is ready but hasn't received any orders yet.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-40 flex items-center justify-center text-muted-foreground">
-                        <ShoppingBag className="h-12 w-12 opacity-20" />
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
-
-    const getStatusVariant = (status: Order['status']) => {
-        switch (status) {
-          case 'pending': return 'secondary';
-          case 'preparing': return 'default';
-          case 'done': return 'default';
-          case 'cancelled': return 'destructive';
-          default: return 'outline';
-        }
-    };
-
-    const totalRevenue = orders.reduce((acc, order) => acc + (order.status !== 'cancelled' ? (order.totalPrice || 0) : 0), 0);
-    const totalOrders = orders.length;
-    const pendingOrders = orders.filter(o => o.status === 'pending').length;
-    const preparingOrders = orders.filter(o => o.status === 'preparing').length;
-    const recentOrders = orders.slice(0, 5);
+    const ordersData = orders || [];
+    const totalRevenue = ordersData.reduce((acc, order) => acc + (order.status !== 'cancelled' ? (order.totalPrice || 0) : 0), 0);
+    const totalOrders = ordersData.length;
+    const pendingOrders = ordersData.filter(o => o.status === 'pending').length;
+    const preparingOrders = ordersData.filter(o => o.status === 'preparing').length;
+    const recentOrders = ordersData.slice(0, 5);
 
     const getRevenueLast7Days = () => {
         const revenueByDay: { [key: string]: number } = {};
@@ -171,7 +143,7 @@ export default function DashboardPage() {
             revenueByDay[dateString] = 0;
         }
 
-        orders.forEach(order => {
+        ordersData.forEach(order => {
             if (order.createdAt && typeof order.createdAt.toDate === 'function' && order.status !== 'cancelled') {
                 const orderDate = order.createdAt.toDate();
                 const diffDays = (today.getTime() - orderDate.getTime()) / (1000 * 3600 * 24);
@@ -186,6 +158,16 @@ export default function DashboardPage() {
     };
 
     const revenueData = getRevenueLast7Days();
+
+    const getStatusVariant = (status: Order['status']) => {
+        switch (status) {
+          case 'pending': return 'secondary';
+          case 'preparing': return 'default';
+          case 'done': return 'default';
+          case 'cancelled': return 'destructive';
+          default: return 'outline';
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -214,20 +196,24 @@ export default function DashboardPage() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-4">
-                            {recentOrders.map(order => (
-                                <div key={order.id} className="flex items-center">
-                                    <div className="flex-1 space-y-1">
-                                        <p className="text-sm font-medium leading-none">{order.customerDetails.fullName}</p>
-                                        <p className="text-xs text-muted-foreground">{order.customerDetails.phone}</p>
+                        {recentOrders.length > 0 ? (
+                            <div className="space-y-4">
+                                {recentOrders.map(order => (
+                                    <div key={order.id} className="flex items-center">
+                                        <div className="flex-1 space-y-1">
+                                            <p className="text-sm font-medium leading-none">{order.customerDetails.fullName}</p>
+                                            <p className="text-xs text-muted-foreground">{order.customerDetails.phone}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-medium text-sm">+{ (order.totalPrice || 0).toFixed(2)} {t('currency')}</p>
+                                            <Badge variant={getStatusVariant(order.status)} className="text-[10px] h-5">{t(order.status)}</Badge>
+                                        </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="font-medium text-sm">+{ (order.totalPrice || 0).toFixed(2)} {t('currency')}</p>
-                                        <Badge variant={getStatusVariant(order.status)} className="text-[10px] h-5">{t(order.status)}</Badge>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-muted-foreground text-center py-10">No recent orders.</p>
+                        )}
                     </CardContent>
                  </Card>
             </div>
