@@ -5,15 +5,13 @@ import { useCollection, useMemoFirebase } from '@/firebase';
 import { collectionGroup, query, orderBy } from 'firebase/firestore';
 import { useFirebase } from '@/firebase/provider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, DollarSign, Package, Hourglass, ShoppingBag, ShieldAlert } from 'lucide-react';
+import { Loader2, DollarSign, Package, Hourglass, ShoppingBag, ShieldAlert, AlertCircle } from 'lucide-react';
 import type { Order } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { ar, enUS, ru } from 'date-fns/locale';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useAdmin } from '@/hooks/use-admin';
-
-// Helper components are defined here for clarity within the single-file structure.
 
 function StatCard({ title, value, icon, description }: { title: string; value: string; icon: React.ReactNode, description?: string }) {
     return (
@@ -52,21 +50,17 @@ export default function DashboardPage() {
     const { t, locale } = useLanguage();
     const { isSuperAdmin, isLoading: isAdminLoading } = useAdmin();
     const { firestore } = useFirebase();
-    const dateLocale = { en: enUS, ar, ru }[locale];
 
-    // Make the query creation dependent on isSuperAdmin being true and firestore being available.
-    // This prevents running the query prematurely.
     const ordersQuery = useMemoFirebase(() => {
         if (!isSuperAdmin || !firestore) return null;
+        // Collection group queries require an index in Firestore Console
         return query(collectionGroup(firestore, 'orders'), orderBy('createdAt', 'desc'));
     }, [isSuperAdmin, firestore]);
 
     const { data: orders, isLoading: isOrdersLoading, error } = useCollection<Order>(ordersQuery);
 
-    // The final loading state depends on both the admin check and the orders loading.
     const isLoading = isAdminLoading || (isSuperAdmin && isOrdersLoading);
 
-    // Display a loading spinner while checking permissions or fetching data.
     if (isLoading) {
         return (
             <div className="space-y-6">
@@ -78,15 +72,14 @@ export default function DashboardPage() {
         );
     }
     
-    // After loading, if the user is not a super admin, show access denied.
     if (!isSuperAdmin) {
         return (
             <div className="space-y-6">
                 <h2 className="text-3xl font-bold tracking-tight">{t('admin_dashboard')}</h2>
-                <Card className="col-span-full">
+                <Card className="border-destructive">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <ShieldAlert className="h-5 w-5 text-destructive" />
+                        <CardTitle className="flex items-center gap-2 text-destructive">
+                            <ShieldAlert className="h-5 w-5" />
                             {t('access_denied')}
                         </CardTitle>
                     </CardHeader>
@@ -99,26 +92,49 @@ export default function DashboardPage() {
     }
 
     if (error) {
-        return <p className="text-destructive col-span-full">Error loading orders: {error.message}</p>;
+        return (
+            <div className="space-y-6">
+                <h2 className="text-3xl font-bold tracking-tight">{t('admin_dashboard')}</h2>
+                <Card className="border-destructive/50 bg-destructive/5">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-destructive">
+                            <AlertCircle className="h-5 w-5" />
+                            Data Access Error
+                        </CardTitle>
+                        <CardDescription>
+                            There was a problem loading the dashboard data.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <p className="text-sm font-mono bg-muted p-3 rounded border">{error.message}</p>
+                        {error.message.includes('index') && (
+                            <p className="text-sm text-muted-foreground italic">
+                                Tip: This dashboard uses a collection group query. If this is a new project, you may need to click the link in the error message (check browser console) to create the required Firestore index.
+                            </p>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+        );
     }
     
     if (!orders || orders.length === 0) {
         return (
             <div className="space-y-6">
                 <h2 className="text-3xl font-bold tracking-tight">{t('admin_dashboard')}</h2>
-                <Card className="col-span-full">
+                <Card>
                     <CardHeader>
                         <CardTitle>No Orders Found</CardTitle>
+                        <CardDescription>The system is ready but hasn't received any orders yet.</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <p>No orders have been placed in the system yet.</p>
+                    <CardContent className="h-40 flex items-center justify-center text-muted-foreground">
+                        <ShoppingBag className="h-12 w-12 opacity-20" />
                     </CardContent>
                 </Card>
             </div>
         );
     }
 
-    // --- All checks passed, we have admin access and orders data ---
     const getStatusVariant = (status: Order['status']) => {
         switch (status) {
           case 'pending': return 'secondary';
@@ -129,7 +145,7 @@ export default function DashboardPage() {
         }
     };
 
-    const totalRevenue = orders.reduce((acc, order) => acc + (order.status !== 'cancelled' ? order.totalPrice : 0), 0);
+    const totalRevenue = orders.reduce((acc, order) => acc + (order.status !== 'cancelled' ? (order.totalPrice || 0) : 0), 0);
     const totalOrders = orders.length;
     const pendingOrders = orders.filter(o => o.status === 'pending').length;
     const preparingOrders = orders.filter(o => o.status === 'preparing').length;
@@ -146,12 +162,12 @@ export default function DashboardPage() {
         }
 
         orders.forEach(order => {
-            if (order.createdAt && order.status !== 'cancelled') {
+            if (order.createdAt && typeof order.createdAt.toDate === 'function' && order.status !== 'cancelled') {
                 const orderDate = order.createdAt.toDate();
                 const diffDays = (today.getTime() - orderDate.getTime()) / (1000 * 3600 * 24);
                 if (diffDays < 7) {
                     const dayName = format(orderDate, 'EEE');
-                    revenueByDay[dayName] = (revenueByDay[dayName] || 0) + order.totalPrice;
+                    revenueByDay[dayName] = (revenueByDay[dayName] || 0) + (order.totalPrice || 0);
                 }
             }
         });
@@ -184,7 +200,7 @@ export default function DashboardPage() {
                     <CardHeader>
                         <CardTitle>{t('recent_orders')}</CardTitle>
                         <CardDescription>
-                            {t('recent_orders_desc', { count: pendingOrders })}
+                            Showing the most recent activity.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -193,11 +209,11 @@ export default function DashboardPage() {
                                 <div key={order.id} className="flex items-center">
                                     <div className="flex-1 space-y-1">
                                         <p className="text-sm font-medium leading-none">{order.customerDetails.fullName}</p>
-                                        <p className="text-sm text-muted-foreground">{order.customerDetails.phone}</p>
+                                        <p className="text-xs text-muted-foreground">{order.customerDetails.phone}</p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-medium">+{order.totalPrice.toFixed(2)} {t('currency')}</p>
-                                        <Badge variant={getStatusVariant(order.status)}>{t(order.status)}</Badge>
+                                        <p className="font-medium text-sm">+{ (order.totalPrice || 0).toFixed(2)} {t('currency')}</p>
+                                        <Badge variant={getStatusVariant(order.status)} className="text-[10px] h-5">{t(order.status)}</Badge>
                                     </div>
                                 </div>
                             ))}

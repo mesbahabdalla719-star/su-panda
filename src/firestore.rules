@@ -9,7 +9,7 @@ service cloud.firestore {
     }
     
     function isSuperAdmin() {
-      // THE UID nWh4SGrdQYZs8wlTg1PqpXoQnB73 IS YOUR MASTER ADMIN
+      // MASTER ADMIN UID: nWh4SGrdQYZs8wlTg1PqpXoQnB73
       return isSignedIn() && request.auth.uid == 'nWh4SGrdQYZs8wlTg1PqpXoQnB73';
     }
     
@@ -18,27 +18,25 @@ service cloud.firestore {
     }
 
     // --- COLLECTION GROUP RULES ---
-    // These MUST be defined at the root for collectionGroup queries to work
+    // These are critical for collectionGroup('orders') queries used in Admin Dashboard
     match /{path=**}/orders/{orderId} {
       allow list, get: if isSuperAdmin();
       allow get: if isSignedIn() && (resource.data.userId == request.auth.uid);
       allow create: if isSignedIn() && (request.resource.data.userId == request.auth.uid);
+      allow update: if isSuperAdmin();
     }
 
     // --- COLLECTION RULES ---
 
-    // CUSTOMERS collection and subcollections
+    // CUSTOMERS collection
     match /customers/{userId} {
-      // Owner and Super Admin can manage profiles
       allow get, list, update: if isSuperAdmin() || isOwner(userId);
       allow create: if isSignedIn() && request.auth.uid == userId;
       
-      // User-specific operational data
       match /cart/{docId} { allow read, write: if isOwner(userId); }
       match /favorites/{docId} { allow read, write: if isOwner(userId); }
       match /nutrition/{docId} { allow read, write: if isOwner(userId); }
 
-      // Sub-collection orders (direct path access)
       match /orders/{orderId} {
         allow create: if isOwner(userId);
         allow get, list, update, delete: if isOwner(userId) || isSuperAdmin();
