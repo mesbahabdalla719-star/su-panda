@@ -24,6 +24,18 @@ Use this method when you have made changes to the code and want to sync them to 
 
 ---
 
+## 🛠️ Troubleshooting: Authentication Failed
+If `git push` fails with "Authentication failed" or "No anonymous write access":
+
+1.  **Generate a Token**: Go to GitHub -> Settings -> Developer Settings -> Personal Access Tokens (Classic) and create a token with `repo` permissions.
+2.  **Update Remote**: Run this command with your token:
+    ```bash
+    git remote set-url origin https://<YOUR_TOKEN_HERE>@github.com/mesbahabdalla719-star/su-panda.git
+    ```
+3.  **Try Pushing again**: `git push`
+
+---
+
 ## Method B: Clean Reset (Start from Zero)
 Use this method only if you want to wipe your entire Git history and start fresh.
 
@@ -52,14 +64,12 @@ Use this method only if you want to wipe your entire Git history and start fresh
     git branch -M main
     ```
 
-6.  **Connect to GitHub**:
-    *(Replace with your actual URL if it changed)*
+6.  **Connect to GitHub (using Token for safety)**:
     ```bash
-    git remote add origin https://github.com/mesbahabdalla719-star/su-panda.git
+    git remote add origin https://<YOUR_TOKEN_HERE>@github.com/mesbahabdalla719-star/su-panda.git
     ```
 
 7.  **Force push to overwrite history**:
-    *Warning: This will replace everything currently on GitHub.*
     ```bash
     git push -u -f origin main
     ```
